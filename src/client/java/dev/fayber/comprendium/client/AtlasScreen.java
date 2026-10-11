@@ -193,8 +193,10 @@ public final class AtlasScreen extends Screen {
                 x + 140, y + 95, MUTED);
 
         List<TraderRow> trades = new ArrayList<>();
-        for (var level : tile.profession().levels())
+        for (var level : tile.profession().levels()) {
+            trades.add(new TraderRow(level.level(), null)); // Pool divider.
             for (var trade : level.trades()) trades.add(new TraderRow(level.level(), trade));
+        }
         int perColumn = Math.max(1, (trades.size() + AtlasLayout.TRADER_COLUMNS - 1)
                 / AtlasLayout.TRADER_COLUMNS);
         int padding = 12, gap = AtlasLayout.TRADER_COLUMN_GAP;
@@ -215,7 +217,16 @@ public final class AtlasScreen extends Screen {
                 TraderRow row = trades.get(index);
                 int iy = y + AtlasLayout.CARD_HEADER + 24
                         + (index - from) * AtlasLayout.ROW_HEIGHT;
-                hovered = drawTrade(graphics, row.trade(), cx, iy, colWidth, mx, my, hovered);
+                if (row.trade() == null) {
+                    graphics.fill(cx, iy, cx + colWidth, iy + AtlasLayout.ROW_HEIGHT - 1,
+                            0xFF344659);
+                    int group = row.pool();
+                    String groupLabel = group >= 1 && group < TRADER_POOL_NAMES.length
+                            ? TRADER_POOL_NAMES[group] : "POOL " + group;
+                    graphics.text(font, groupLabel, cx + 7, iy + 8, ACCENT);
+                } else {
+                    hovered = drawTrade(graphics, row.trade(), cx, iy, colWidth, mx, my, hovered);
+                }
             }
         }
         return hovered;
