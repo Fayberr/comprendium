@@ -1,6 +1,7 @@
 package dev.fayber.comprendium.client;
 
 import dev.fayber.comprendium.data.AtlasLayout;
+import dev.fayber.comprendium.data.TradeGroups;
 import dev.fayber.comprendium.data.TradeAtlas;
 import dev.fayber.comprendium.data.TradeAtlas.Ingredient;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -158,13 +159,23 @@ public final class AtlasScreen extends Screen {
         var p = tile.profession();
         int x = tile.x(), y = tile.y(), w = tile.width();
         graphics.text(font, p.name(), x + 13, y + 14, TEXT);
-        String id = p.id().startsWith("minecraft:") ? "VILLAGER  •  VANILLA" : p.id();
-        graphics.text(font, id, x + 13, y + 31, MUTED);
-        graphics.fill(x + 133, y + 63, x + 220, y + 111, 0xFF182430);
-        graphics.text(font, "JOB SITE", x + 146, y + 70, MUTED);
+        // Vanilla is the default; call out only external professions.
+        if (!p.id().startsWith("minecraft:")) {
+            graphics.text(font, "MODDED  •  " + p.id(), x + 13, y + 32, ACCENT);
+        }
+        graphics.text(font, "WORKSTATION", x + 145, y + 63, MUTED);
         ItemStack workstation = itemStack(new Ingredient(p.workstation(), 1, "1", ""), false);
-        if (!workstation.isEmpty()) graphics.fakeItem(workstation, x + 164, y + 86);
-        else graphics.text(font, "—", x + 172, y + 91, MUTED);
+        if (!workstation.isEmpty()) {
+            // Workstation is still Minecraft's genuine item/block render, not a PNG.
+            // Scaling in the GUI pose makes the actual block visible at normal zoom.
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(x + 162f, y + 78f);
+            graphics.pose().scale(1.9f, 1.9f);
+            graphics.fakeItem(workstation, 0, 0);
+            graphics.pose().popMatrix();
+        } else {
+            graphics.text(font, "—", x + 172, y + 91, MUTED);
+        }
         graphics.fill(x + 12, y + 119, x + w - 12, y + 120, BORDER);
         int cursorY = y + AtlasLayout.CARD_HEADER;
         for (var level : p.levels()) {
@@ -172,12 +183,16 @@ public final class AtlasScreen extends Screen {
             graphics.fill(x + 9, cursorY, x + w - 9, cursorY + AtlasLayout.TIER_HEIGHT - 3, 0xFF2B3948);
             String name = tier == 0 ? "LEVEL " + level.level() : LEVEL_NAMES[tier];
             graphics.text(font, name, x + 16, cursorY + 6, LEVEL_COLORS[tier]);
-            String count = Integer.toString(level.trades().size());
+            var grouped = TradeGroups.group(level.trades());
+            String count = grouped.size() == level.trades().size()
+                    ? Integer.toString(grouped.size()) : grouped.size() + " / " + level.trades().size();
             graphics.text(font, count, x + w - font.width(count) - 17, cursorY + 6, MUTED);
             cursorY += AtlasLayout.TIER_HEIGHT;
-            for (var trade : level.trades()) {
-                hovered = drawTrade(graphics, trade, x + 9, cursorY, w - 18, mx, my, hovered);
-                cursorY += AtlasLayout.ROW_HEIGHT;
+            for (var display : grouped) {
+                hovered = display.grouped()
+                        ? drawGroupedTrade(graphics, display, x + 9, cursorY, w - 18, mx, my, hovered)
+                        : drawTrade(graphics, display.primary(), x + 9, cursorY, w - 18, mx, my, hovered);
+                cursorY += display.height();
             }
         }
         return hovered;
@@ -228,6 +243,38 @@ public final class AtlasScreen extends Screen {
                     hovered = drawTrade(graphics, row.trade(), cx, iy, colWidth, mx, my, hovered);
                 }
             }
+        }
+        return hovered;
+    }
+
+    /**
+     * Compact presentation of all color variants at an identical price. The
+     * palette uses the real item icons: eight variants per line, never a static
+     * image and never a lossy representative item.
+     */
+    private Hover drawGroupedTrade(GuiGraphicsExtractor graphics, TradeGroups.DisplayTrade display,
+                                   int x, int y, int width, float mx, float my, Hover hovered) {
+        int h = display.height();
+        boolean over = mx >= x && mx <= x + width && my >= y && my < y + h;
+        graphics.fill(x, y, x + width, y + h - 1, over ? 0xFF35465A : 0xFF222F3D);
+        graphics.fill(x, y + h - 2, x + width, y + h - 1, 0xFF2D3B49);
+        var base = display.primary();
+        int fixedY = y + (h - 16) / 2;
+        if (display.inputVariants()) {
+            graphics.text(font, "→", x + 145, fixedY + 2, ACCENT);
+            hovered = drawItem(graphics, base.gives(), x + 177, fixedY,
+                    base.glintPreview(), mx, my, hovered);
+        } else {
+            hovered = drawItem(graphics, base.wants(), x + 11, fixedY, false, mx, my, hovered);
+            graphics.text(font, "→", x + 54, fixedY + 2, ACCENT);
+        }
+        int paletteX = display.inputVariants() ? x + 8 : x + 78;
+        for (int i = 0; i < display.variants().size(); i++) {
+            var variant = display.variants().get(i);
+            Ingredient ingredient = display.inputVariants() ? variant.wants() : variant.gives();
+            hovered = drawItem(graphics, ingredient,
+                    paletteX + (i % 8) * 16, y + 4 + (i / 8) * 18,
+                    false, mx, my, hovered);
         }
         return hovered;
     }
@@ -304,12 +351,13 @@ public final class AtlasScreen extends Screen {
         LivingEntity entity = model(tile.profession().id());
         if (entity == null) return;
         int size = Math.max(1, Math.round(31 * zoom));
-        // Use the stable 26.3 API with a fixed synthetic mouse target, so
-        // models neither rotate with the cursor nor drift relative to the card.
+        // The preview helper uses *absolute pixel deltas* from the supplied
+        // cursor position to calculate its angle. Scaling those deltas with zoom
+        // caused the villagers to rotate whenever the user zoomed the atlas.
+        // Always aim at the preview center for a stable straight-ahead view.
         InventoryScreen.extractEntityInInventoryFollowsMouse(graphics,
                 Math.round(sx), Math.round(sy), Math.round(ex), Math.round(ey),
-                size, 0f, (sx + ex) * 0.5f + 18f * zoom,
-                (sy + ey) * 0.5f - 10f * zoom, entity);
+                size, 0f, (sx + ex) * 0.5f, (sy + ey) * 0.5f, entity);
     }
 
     private LivingEntity model(String professionId) {
