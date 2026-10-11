@@ -51,7 +51,7 @@ public record CraftRecipe(String outputItem, List<String> grid, String recipeId)
         }
     }
 
-    static String ingredientId(JsonElement value) {
+    public static String ingredientId(JsonElement value) {
         if (value == null || value.isJsonNull()) return null;
         if (value.isJsonArray()) {
             for (JsonElement entry : value.getAsJsonArray()) {
