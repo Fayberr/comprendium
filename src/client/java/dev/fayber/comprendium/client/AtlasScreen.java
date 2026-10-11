@@ -223,13 +223,42 @@ public final class AtlasScreen extends Screen {
         return font.width(canvasLabel(label, false, 1f));
     }
 
+    private static final int[] TITLE_RASTERS = {1, 2, 3, 4, 6, 8, 10, 12};
+
+    /**
+     * Unlike the standard UI font (9 logical pixels), titles use native
+     * 18-pixel Inter glyphs. We only scale DOWN to fit unusually long names,
+     * never upscale a 9px glyph and magnify its edges.
+     */
+    private Component titleLabel(String title, int oversample) {
+        return Component.literal(title).setStyle(Style.EMPTY.withFont(
+                new FontDescription.Resource(Identifier.fromNamespaceAndPath(
+                        "comprendium", "atlas_title_x" + oversample))));
+    }
+
+    private static int nearestTitleRaster(float physicalScale) {
+        int nearest = TITLE_RASTERS[0];
+        for (int step : TITLE_RASTERS) {
+            if (Math.abs(step - physicalScale) < Math.abs(nearest - physicalScale)) nearest = step;
+        }
+        return nearest;
+    }
+
     private void atlasTitle(GuiGraphicsExtractor graphics, String title, int x, int y, int maxWidth) {
-        Component sample = canvasLabel(title, true, 2f);
-        float size = Math.min(2f, maxWidth / (float) Math.max(1, font.width(sample)));
+        Component measurement = titleLabel(title, 2);
+        float fit = Math.min(1f, maxWidth / (float) Math.max(1, font.width(measurement)));
+        // The GUI scale and atlas zoom both affect how many display pixels a
+        // single text glyph occupies. Choose a matching TTF atlas resolution.
+        int oversample = nearestTitleRaster(Ui.scale() * zoom * fit);
+        float visibleHeight = 18f * fit;
+        // Move the profession accent from the unscaled card shell to the title
+        // so its height always follows the title itself (including long names).
+        Ui.roundRect(graphics, x - 7f, y, 4f, visibleHeight,
+                2f, ACCENT);
         graphics.pose().pushMatrix();
         graphics.pose().translate(x, y);
-        graphics.pose().scale(size, size);
-        graphics.text(font, canvasLabel(title, true, size), 0, 0, TEXT, false);
+        if (fit < 1f) graphics.pose().scale(fit, fit);
+        graphics.text(font, titleLabel(title, oversample), 0, 0, TEXT, false);
         graphics.pose().popMatrix();
     }
 
@@ -239,7 +268,6 @@ public final class AtlasScreen extends Screen {
         Ui.roundRectBorder(graphics, x, y, w, h, 11, SURFACE, BORDER, 1f);
         Ui.roundRect(graphics, x + 1, y + 1, w - 2,
                 AtlasLayout.CARD_HEADER - 8, 10, SURFACE_TOP);
-        Ui.roundRect(graphics, x + 12, y + 11, 3, 15, 2, ACCENT);
     }
 
     private Hover drawVillager(GuiGraphicsExtractor graphics, AtlasLayout.Tile tile,
@@ -335,7 +363,7 @@ public final class AtlasScreen extends Screen {
                              float mx, float my, Hover hovered) {
         panel(graphics, tile);
         int x = tile.x(), y = tile.y(), w = tile.width();
-        atlasText(graphics, "Wandering Trader", x + 15, y + 14, TEXT);
+        atlasTitle(graphics, "Wandering Trader", x + 19, y + 15, w - 36);
         atlasText(graphics, "SPECIAL TRADER  /  NO WORKSTATION", x + 15, y + 31, MUTED);
         atlasText(graphics, "BUYING  •  COMMON  •  UNCOMMON   /   RANDOM POSSIBLE OFFERS",
                 x + 140, y + 95, MUTED);
@@ -468,7 +496,9 @@ public final class AtlasScreen extends Screen {
             graphics.pose().popMatrix();
             String amount = ingredient.amount();
             if (amount != null && !amount.equals("1")) {
-                atlasText(graphics, amount, x + 21 - atlasTextWidth(amount), y + 15, TEXT);
+                // Vanilla Minecraft's regular item-stack count font and shadow.
+                // UI labels still use Inter; item quantities intentionally do not.
+                graphics.text(font, amount, x + 21 - font.width(amount), y + 15, TEXT, true);
             }
         }
         return mx >= x && mx < x + 22 && my >= y && my < y + 22
