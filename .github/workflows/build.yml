@@ -22,20 +22,15 @@ jobs:
           repository: Fayberr/modern-gui
           ref: 785e5c0f7b5d95c334955af1372674a588d9a362
           path: _modern-gui
-      - name: Build modern-gui for Minecraft 26.3
+      - name: Build Modern GUI for Minecraft 26.3
         run: gradle --no-daemon -p _modern-gui publishToMavenLocal
-      - name: Compile, test and remap
+      - name: Compile and test Comprendium
         run: gradle --no-daemon build
-      - name: Verify bundled Modern GUI library
+      - name: Verify Modern GUI bundle
         run: |
-          jarfile=$(find build/libs -maxdepth 1 -name 'comprendium-*.jar' ! -name '*sources*' -print -quit)
+          jarfile=$(find build/libs -maxdepth 1 -name "comprendium-*.jar" ! -name "*sources*" -print -quit)
           test -n "$jarfile"
-          unzip -Z1 "$jarfile" | grep -E '^META-INF/jars/modern-gui.*\\.jar
-        with:
-          name: comprendium-fabric-26.3
-          path: build/libs/*.jar
-          if-no-files-found: error
-
+          jar tf "$jarfile" | grep "META-INF/jars/modern-gui"
       - uses: actions/upload-artifact@v4
         with:
           name: comprendium-fabric-26.3
