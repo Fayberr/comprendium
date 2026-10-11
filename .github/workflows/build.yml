@@ -26,6 +26,16 @@ jobs:
         run: gradle --no-daemon -p _modern-gui publishToMavenLocal
       - name: Compile, test and remap
         run: gradle --no-daemon build
+      - name: Verify bundled Modern GUI library
+        run: |
+          jarfile=$(find build/libs -maxdepth 1 -name 'comprendium-*.jar' ! -name '*sources*' -print -quit)
+          test -n "$jarfile"
+          unzip -Z1 "$jarfile" | grep -E '^META-INF/jars/modern-gui.*\\.jar
+        with:
+          name: comprendium-fabric-26.3
+          path: build/libs/*.jar
+          if-no-files-found: error
+
       - uses: actions/upload-artifact@v4
         with:
           name: comprendium-fabric-26.3
