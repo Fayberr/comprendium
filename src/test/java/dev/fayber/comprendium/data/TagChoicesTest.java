@@ -35,7 +35,7 @@ class TagChoicesTest {
         assertEquals("", choices.representative("#minecraft:cycle_a", 10));
         assertEquals("", choices.representative("#minecraft:missing", 10));
         assertEquals("minecraft:furnace", choices.representative("minecraft:furnace", 999));
-        assertEquals("minecraft:oak_log", choices.representative("#minecraft:logs", -3));
+        assertEquals("minecraft:oak_log", choices.representative("#minecraft:logs", -4));
     }
 
     @Test
