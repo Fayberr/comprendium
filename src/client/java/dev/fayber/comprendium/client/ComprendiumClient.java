@@ -13,13 +13,16 @@ import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 public final class ComprendiumClient implements ClientModInitializer {
-    private static TradeAtlas current = TradeAtlas.empty("Waiting for synchronized trade definitions");
+    private static TradeAtlas vanilla = TradeAtlas.empty("Bundled vanilla trades not loaded");
+    private static TradeAtlas current = vanilla;
     private static KeyMapping openKey;
 
     public static TradeAtlas atlas() { return current; }
 
     @Override
     public void onInitializeClient() {
+        vanilla = VanillaAtlas.load();
+        current = vanilla;
         openKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.comprendium.open", GLFW.GLFW_KEY_J,
                 KeyMapping.Category.register(Identifier.fromNamespaceAndPath("comprendium", "general"))));
@@ -35,7 +38,7 @@ public final class ComprendiumClient implements ClientModInitializer {
             }
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
-                current = TradeAtlas.empty("Server does not provide Comprendium trade data"));
+                current = vanilla);
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (openKey.consumeClick()) {
                 if (client.level != null) client.setScreen(new AtlasScreen());
