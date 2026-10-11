@@ -79,7 +79,7 @@ public final class AtlasScreen extends Screen {
         super.init();
         guideTabs = new Tabs(0, 24,
                 java.util.Arrays.stream(GuideSection.values())
-                        .map(tab -> Component.literal(tab.title())).toList(),
+                        .<Component>map(tab -> Component.literal(tab.title())).toList(),
                 () -> section.ordinal(),
                 index -> section = GuideSection.values()[index])
                 .theme(Theme.dark().withAccent(ACCENT));
