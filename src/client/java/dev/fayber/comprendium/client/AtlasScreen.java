@@ -207,6 +207,9 @@ public final class AtlasScreen extends Screen {
             graphics.text(font, "RECIPE UNAVAILABLE", x - 23, y + 22, MUTED);
             return hovered;
         }
+        // One shared second counter makes all slots of the same ingredient tag
+        // show the same type of wood/planks on each recipe frame.
+        long recipeSecond = System.currentTimeMillis() / 1_000L;
         for (int index = 0; index < 9; index++) {
             int ix = x + index % 3 * 18;
             int iy = y + index / 3 * 18;
@@ -214,7 +217,7 @@ public final class AtlasScreen extends Screen {
             graphics.fill(ix + 1, iy + 1, ix + 16, iy + 16, 0xFF1B2935);
             String ingredient = recipe.grid().get(index);
             if (ingredient.isEmpty()) continue;
-            String sample = workstationRecipes.representative(ingredient);
+            String sample = workstationRecipes.representative(ingredient, recipeSecond);
             if (sample.isEmpty()) {
                 graphics.text(font, "?", ix + 5, iy + 4, GOLD);
             } else {
@@ -289,22 +292,36 @@ public final class AtlasScreen extends Screen {
         graphics.fill(x, y, x + width, y + h - 1, over ? 0xFF35465A : 0xFF222F3D);
         graphics.fill(x, y + h - 2, x + width, y + h - 1, 0xFF2D3B49);
         var base = display.primary();
-        int fixedY = y + (h - 16) / 2;
+        int paletteHeight = 8 + ((display.variants().size() + display.columns() - 1)
+                / display.columns()) * 18;
+        int fixedY = y + (paletteHeight - 16) / 2;
         if (display.inputVariants()) {
             graphics.text(font, "→", x + 145, fixedY + 2, ACCENT);
             hovered = drawItem(graphics, base.gives(), x + 177, fixedY,
                     base.glintPreview(), mx, my, hovered);
         } else {
-            hovered = drawItem(graphics, base.wants(), x + 11, fixedY, false, mx, my, hovered);
-            graphics.text(font, "→", x + 54, fixedY + 2, ACCENT);
+            hovered = drawItem(graphics, base.wants(), x + 8, fixedY, false, mx, my, hovered);
+            if (base.additionalWants() != null) {
+                graphics.text(font, "+", x + 29, fixedY + 3, MUTED);
+                hovered = drawItem(graphics, base.additionalWants(), x + 41, fixedY,
+                        false, mx, my, hovered);
+                graphics.text(font, "→", x + 68, fixedY + 2, ACCENT);
+            } else {
+                graphics.text(font, "→", x + 54, fixedY + 2, ACCENT);
+            }
         }
-        int paletteX = display.inputVariants() ? x + 8 : x + 78;
+        int paletteX = display.inputVariants() ? x + 8 :
+                (base.additionalWants() != null ? x + 90 : x + 78);
         for (int i = 0; i < display.variants().size(); i++) {
             var variant = display.variants().get(i);
             Ingredient ingredient = display.inputVariants() ? variant.wants() : variant.gives();
             hovered = drawItem(graphics, ingredient,
-                    paletteX + (i % 8) * 16, y + 4 + (i / 8) * 18,
+                    paletteX + (i % display.columns()) * 16,
+                    y + 4 + (i / display.columns()) * 18,
                     false, mx, my, hovered);
+        }
+        if (display.biomeDependent()) {
+            graphics.text(font, "BIOME-DEPENDENT OPTIONS", x + 10, y + h - 12, MUTED);
         }
         return hovered;
     }

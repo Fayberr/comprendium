@@ -44,3 +44,11 @@ MIT.
 ### Workstation recipes
 
 The GUI discovers Java Edition shaped crafting recipes in the installed Minecraft and Fabric mod resource packs (`data/<namespace>/recipe/*.json`). Ingredients from item tags display one valid local example, not the only permissible ingredient. This is client-side recipe discovery, not a new network protocol: server-exclusive datapack recipes remain unavailable to clients unless they are also present in a locally installed pack or mod. No recipe image or ingredient list is hardcoded.
+
+### Cartographer variants
+
+Biome-dependent banner trades and village maps are grouped when their costs, modifier flags and trade conditions match. The compact palette retains each individual offer and shows **BIOME-DEPENDENT OPTIONS** to avoid implying every offer is available from a single villager. Maps that cost both emeralds and a compass display both input icons. Different prices or conditions remain separate.
+
+### Rotating crafting ingredients
+
+When a recipe uses an item tag such as `#minecraft:logs` or `#minecraft:planks`, Comprendium cycles valid item variants roughly once each second (oak, birch, dark oak, etc.). Each occurrence of the same tag uses the same variant on a given frame. The original crafting recipe is not changed. Only item-tag alternatives present in local game/mod data can be displayed; the mod cannot infer server-only datapacks without synchronization.
