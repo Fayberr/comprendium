@@ -8,7 +8,7 @@ import net.minecraft.resources.Identifier;
 
 public record AtlasPayload(String json) implements CustomPacketPayload {
     public static final Type<AtlasPayload> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath("comprendium", "atlas_v1"));
+            new Type<>(Identifier.fromNamespaceAndPath("comprendium", "atlas_v2"));
     public static final StreamCodec<RegistryFriendlyByteBuf, AtlasPayload> CODEC =
             StreamCodec.of((buf, value) -> buf.writeUtf(value.json(), TradeAtlas.MAX_JSON_CHARS),
                     buf -> new AtlasPayload(buf.readUtf(TradeAtlas.MAX_JSON_CHARS)));
