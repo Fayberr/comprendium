@@ -207,6 +207,9 @@ public final class AtlasScreen extends Screen {
             graphics.text(font, "RECIPE UNAVAILABLE", x - 23, y + 22, MUTED);
             return hovered;
         }
+        // One shared second counter makes all slots of the same ingredient tag
+        // show the same type of wood/planks on each recipe frame.
+        long recipeSecond = System.currentTimeMillis() / 1_000L;
         for (int index = 0; index < 9; index++) {
             int ix = x + index % 3 * 18;
             int iy = y + index / 3 * 18;
@@ -214,7 +217,7 @@ public final class AtlasScreen extends Screen {
             graphics.fill(ix + 1, iy + 1, ix + 16, iy + 16, 0xFF1B2935);
             String ingredient = recipe.grid().get(index);
             if (ingredient.isEmpty()) continue;
-            String sample = workstationRecipes.representative(ingredient);
+            String sample = workstationRecipes.representative(ingredient, recipeSecond);
             if (sample.isEmpty()) {
                 graphics.text(font, "?", ix + 5, iy + 4, GOLD);
             } else {
