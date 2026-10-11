@@ -293,9 +293,12 @@ public final class AtlasScreen extends Screen {
         LivingEntity entity = model(tile.profession().id());
         if (entity == null) return;
         int size = Math.max(1, Math.round(31 * zoom));
-        InventoryScreen.renderEntityInInventoryFollowsAngle(graphics,
+        // Use the stable 26.3 API with a fixed synthetic mouse target, so
+        // models neither rotate with the cursor nor drift relative to the card.
+        InventoryScreen.extractEntityInInventoryFollowsMouse(graphics,
                 Math.round(sx), Math.round(sy), Math.round(ex), Math.round(ey),
-                size, 0f, 0.09f, 0.38f, entity);
+                size, 0f, (sx + ex) * 0.5f + 18f * zoom,
+                (sy + ey) * 0.5f - 10f * zoom, entity);
     }
 
     private LivingEntity model(String professionId) {
