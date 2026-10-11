@@ -72,3 +72,10 @@ Modern GUI is client-only. Comprendium's networking and server code do not refer
 - Trade item previews use 1.32× native rendering scale and matching hitboxes; trade tiers, compact groups, and row geometry were adjusted to prevent overlaps.
 - Atlas labels now use the bundled Modern GUI Inter fonts instead of Minecraft's bitmap GUI font. Their glyph atlas oversampling adapts to the combined Minecraft GUI scale, Comprendium zoom, and optional title scale. This improves smoothness especially at enlarged zoom, though extremely high zoom can still show some pixels because Modern GUI currently supplies glyph atlases up to 6× oversampling.
 - The header/footer remain at fixed screen size; the atlas canvas (including tooltips) still pans and zooms as before.
+
+## Typography polish (0.3.2)
+
+- Profession headings use **native 18px Inter Semibold** glyphs rather than enlarging 9px font glyphs. Font resources include oversampling 1×, 2×, 3×, 4×, 6×, 8×, 10× and 12× so name rendering stays sharper during canvas zoom. Exceptionally long modded names may still be scaled down to fit their cards.
+- The green vertical profession accent now uses the final heading height, including any name fitting. The same styling applies to the Wandering Trader heading.
+- Trade item quantities use Minecraft's **vanilla item-stack pixel font with shadow**. Trading labels and UI chrome still use Modern GUI's Inter font.
+- Other atlas geometry, trade metadata and server synchronization are unchanged.
