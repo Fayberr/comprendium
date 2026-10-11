@@ -24,7 +24,7 @@ class CartographerGroupsTest {
         assertEquals(1, grouped.size());
         assertTrue(grouped.getFirst().biomeDependent());
         assertEquals(16, grouped.getFirst().variants().size());
-        assertEquals(57, grouped.getFirst().height());
+        assertEquals(95, grouped.getFirst().height());
         assertEquals(source, grouped.getFirst().variants());
     }
 
@@ -39,9 +39,9 @@ class CartographerGroupsTest {
         var grouped = TradeGroups.group(source);
         assertEquals(1, grouped.size());
         assertEquals("village_map", grouped.getFirst().family());
-        assertEquals(7, grouped.getFirst().columns());
+        assertEquals(5, grouped.getFirst().columns());
         assertEquals(5, grouped.getFirst().variants().size());
-        assertEquals(39, grouped.getFirst().height());
+        assertEquals(47, grouped.getFirst().height());
         assertEquals(source, grouped.getFirst().variants());
         var different = new TradeAtlas.Trade("different",
                 ingredient("emerald", 9), ingredient("compass", 1),
