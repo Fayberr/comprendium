@@ -34,6 +34,9 @@ public final class TradeGroups {
     private static final List<String> OTHER_FAMILIES = List.of(
             "raft", "chest_raft", "coral", "coral_fan", "coral_block"
     );
+    private static final List<String> VILLAGE_TYPES = List.of(
+            "plains", "desert", "savanna", "taiga", "snowy", "jungle", "swamp"
+    );
     private static final List<String> OTHER_VARIANTS = List.of(
             "bamboo", "tube", "brain", "bubble", "fire", "horn"
     );
@@ -46,13 +49,22 @@ public final class TradeGroups {
         }
         public TradeAtlas.Trade primary() { return variants.getFirst(); }
         public boolean grouped() { return variants.size() >= 3; }
+        public int columns() {
+            return primary().additionalWants() != null ? 7 : 8;
+        }
+        public boolean biomeDependent() {
+            return primary().conditional();
+        }
         public int height() {
-            return grouped() ? 8 + ((variants.size() + 7) / 8) * 18 : AtlasLayout.ROW_HEIGHT;
+            if (!grouped()) return AtlasLayout.ROW_HEIGHT;
+            return 8 + ((variants.size() + columns() - 1) / columns()) * 18
+                    + (biomeDependent() ? 13 : 0);
         }
     }
 
     private record GroupKey(boolean input, String family, TradeAtlas.Ingredient unchanged,
-                            String varyingAmount, int varyingCount, String varyingDetails,
+                            TradeAtlas.Ingredient additional, String varyingAmount,
+                            int varyingCount, String varyingDetails,
                             boolean modified, boolean conditional, boolean glint) {}
 
     public static List<DisplayTrade> group(List<TradeAtlas.Trade> trades) {
@@ -86,18 +98,18 @@ public final class TradeGroups {
     }
 
     private static GroupKey candidate(TradeAtlas.Trade trade) {
-        if (trade == null || trade.conditional() || trade.glintPreview()
-                || trade.additionalWants() != null || trade.wants() == null || trade.gives() == null)
+        if (trade == null || trade.glintPreview()
+                || trade.wants() == null || trade.gives() == null)
             return null;
         String outputFamily = family(trade.gives().id());
         if (outputFamily != null) {
-            return new GroupKey(false, outputFamily, trade.wants(),
+            return new GroupKey(false, outputFamily, trade.wants(), trade.additionalWants(),
                     trade.gives().amount(), trade.gives().count(), trade.gives().details(),
                     trade.modified(), trade.conditional(), trade.glintPreview());
         }
         String inputFamily = family(trade.wants().id());
         if (inputFamily != null) {
-            return new GroupKey(true, inputFamily, trade.gives(),
+            return new GroupKey(true, inputFamily, trade.gives(), trade.additionalWants(),
                     trade.wants().amount(), trade.wants().count(), trade.wants().details(),
                     trade.modified(), trade.conditional(), trade.glintPreview());
         }
@@ -107,6 +119,10 @@ public final class TradeGroups {
     private static String family(String id) {
         if (id == null || !id.startsWith("minecraft:")) return null;
         String path = id.substring("minecraft:".length());
+        if (path.endsWith("_village_map")
+                && VILLAGE_TYPES.contains(path.substring(0, path.length() - "_village_map".length()))) {
+            return "village_map";
+        }
         for (String family : FAMILIES) {
             String suffix = "_" + family;
             if (path.endsWith(suffix) && COLORS.contains(path.substring(0, path.length() - suffix.length()))) {
