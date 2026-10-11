@@ -10,7 +10,7 @@ class TradeAtlasTest {
         TradeAtlas.Ingredient emeralds = new TradeAtlas.Ingredient("minecraft:emerald", 4, "4", "");
         TradeAtlas.Ingredient boots = new TradeAtlas.Ingredient("minecraft:iron_boots", 1, "1", "");
         TradeAtlas.Trade trade = new TradeAtlas.Trade("minecraft:armorer/1/emerald_iron_boots",
-                emeralds, null, boots, false, false);
+                emeralds, null, boots, false, false, true);
         TradeAtlas original = new TradeAtlas(TradeAtlas.VERSION, "test",
                 List.of(new TradeAtlas.Profession("minecraft:armorer", "Armorer",
                         "minecraft:blast_furnace", List.of(new TradeAtlas.Level(1, List.of(trade), "2")))));
@@ -20,7 +20,7 @@ class TradeAtlasTest {
     @Test
     void rejectsUnsupportedProtocol() {
         assertThrows(IllegalArgumentException.class,
-                () -> TradeAtlas.parse("{\"protocol\":2,\"source\":\"evil\",\"professions\":[]}"));
+                () -> TradeAtlas.parse("{\"protocol\":99,\"source\":\"evil\",\"professions\":[]}"));
     }
 
     @Test
