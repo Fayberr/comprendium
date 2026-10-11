@@ -12,7 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.item.Item;
@@ -183,7 +183,7 @@ public final class AtlasScreen extends Screen {
         if (minecraft.level == null) return null;
         return models.computeIfAbsent(professionId, id -> {
             try {
-                Villager entity = EntityType.VILLAGER.create(minecraft.level, EntitySpawnReason.COMMAND);
+                Villager entity = EntityTypes.VILLAGER.create(minecraft.level, EntitySpawnReason.COMMAND);
                 if (entity != null) entity.setVillagerData(entity.getVillagerData().withProfession(
                         minecraft.level.registryAccess(),
                         ResourceKey.create(Registries.VILLAGER_PROFESSION, Identifier.parse(id))));
