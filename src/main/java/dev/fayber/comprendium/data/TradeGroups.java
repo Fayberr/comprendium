@@ -108,7 +108,8 @@ public final class TradeGroups {
                     trade.modified(), trade.conditional(), trade.glintPreview());
         }
         String inputFamily = family(trade.wants().id());
-        if (inputFamily != null) {
+        // A varying input plus an additional fixed cost needs a different compact layout.
+        if (inputFamily != null && trade.additionalWants() == null) {
             return new GroupKey(true, inputFamily, trade.gives(), trade.additionalWants(),
                     trade.wants().amount(), trade.wants().count(), trade.wants().details(),
                     trade.modified(), trade.conditional(), trade.glintPreview());
