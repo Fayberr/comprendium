@@ -52,3 +52,15 @@ Biome-dependent banner trades and village maps are grouped when their costs, mod
 ### Rotating crafting ingredients
 
 When a recipe uses an item tag such as `#minecraft:logs` or `#minecraft:planks`, Comprendium cycles valid item variants roughly once each second (oak, birch, dark oak, etc.). Each occurrence of the same tag uses the same variant on a given frame. The original crafting recipe is not changed. Only item-tag alternatives present in local game/mod data can be displayed; the mod cannot infer server-only datapacks without synchronization.
+
+## UI shell (0.3.0)
+
+The top bar is now the shared guide navigation shell: **Trading** opens the current villager atlas, and **Next guide +** opens an empty future-guide canvas. Switching tabs retains the atlas pan and zoom. The header no longer displays profession counts or zoom, which are in the bottom status bar instead. Workstation previews respond to hover with the real Minecraft item tooltip. The atlas uses rounded cards, rows, and crafting slots, with the Modern GUI 26.3 font/rendering primitives.
+
+### Building with Modern GUI
+
+The universal Comprendium JAR **bundles** [Modern GUI](https://github.com/Fayberr/modern-gui) version `1.0.14+26.3` (pinned source commit `785e5c0f7b5d95c334955af1372674a588d9a362`) as a nested client-only Fabric mod, so users do not need to install another JAR. CI builds that version and publishes it into Maven Local before building Comprendium.
+
+For local builds, first checkout the pinned Modern GUI `fabric/26.3` revision and run `gradle publishToMavenLocal` with Java 25, then build Comprendium normally. The bundled Modern GUI library is LGPL-3.0-or-later; its source and license are available upstream and in its nested JAR. Comprendium's own source remains MIT licensed.
+
+Modern GUI is client-only. Comprendium's networking and server code do not reference GUI APIs; the universal JAR still runs on a dedicated server.

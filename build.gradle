@@ -14,10 +14,14 @@ loom {
         }
     }
 }
+repositories { mavenLocal() }
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    // Modern GUI's Minecraft 26.3 artifact is published locally in the bootstrap step.
+    implementation 'net.fayber:modern-gui:1.0.14+26.3'
+    include 'net.fayber:modern-gui:1.0.14+26.3'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

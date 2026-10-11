@@ -1,6 +1,9 @@
 package dev.fayber.comprendium.client;
 
 import dev.fayber.comprendium.data.AtlasLayout;
+import net.fayber.moderngui.render.Ui;
+import net.fayber.moderngui.render.Theme;
+import net.fayber.moderngui.widget.Tabs;
 import dev.fayber.comprendium.data.CraftRecipe;
 import dev.fayber.comprendium.data.TradeGroups;
 import dev.fayber.comprendium.data.TradeAtlas;
@@ -33,8 +36,8 @@ import java.util.Map;
  * GUI extraction does not apply that matrix to extracted 3D render states.
  */
 public final class AtlasScreen extends Screen {
-    private static final int HEADER = 59;
-    private static final int FOOTER = 27;
+    private static final int HEADER = 82;
+    private static final int FOOTER = 34;
     private static final int BACKGROUND = 0xFF0C121B;
     private static final int SURFACE = 0xFF17212D;
     private static final int SURFACE_TOP = 0xFF202E3B;
@@ -53,6 +56,8 @@ public final class AtlasScreen extends Screen {
         "", "BUYING", "COMMON", "UNCOMMON"
     };
 
+    private GuideSection section = GuideSection.TRADING;
+    private Tabs guideTabs;
     private float zoom = 0.85f;
     private float panX, panY;
     private boolean positioned;
@@ -70,12 +75,27 @@ public final class AtlasScreen extends Screen {
     }
 
     @Override
+    protected void init() {
+        super.init();
+        guideTabs = new Tabs(0, 24,
+                java.util.Arrays.stream(GuideSection.values())
+                        .<Component>map(tab -> Component.literal(tab.title())).toList(),
+                () -> section.ordinal(),
+                index -> section = GuideSection.values()[index])
+                .theme(Theme.dark().withAccent(ACCENT));
+        guideTabs.setX((width - guideTabs.getWidth()) / 2);
+        addRenderableWidget(guideTabs);
+    }
+
+    @Override
     public boolean isPauseScreen() { return false; }
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         TradeAtlas atlas = ComprendiumClient.atlas();
-        if (workstationRecipes == null) workstationRecipes = WorkstationRecipes.load();
+        if (section == GuideSection.TRADING && workstationRecipes == null) {
+            workstationRecipes = WorkstationRecipes.load();
+        }
         if (layout == null || lastAtlas != atlas) {
             layout = AtlasLayout.arrange(atlas.professions());
             lastAtlas = atlas;
@@ -89,6 +109,7 @@ public final class AtlasScreen extends Screen {
             positioned = true;
         }
         graphics.fill(0, 0, width, height, BACKGROUND);
+        if (section == GuideSection.TRADING) {
         graphics.enableScissor(0, HEADER, width, height - FOOTER);
         graphics.pose().pushMatrix();
         graphics.pose().translate(panX, panY);
@@ -115,28 +136,55 @@ public final class AtlasScreen extends Screen {
             if (visible(tile)) drawPreview(graphics, tile);
         }
         graphics.disableScissor();
-
-        // Fixed chrome is drawn after the transformed atlas.
-        graphics.fill(0, 0, width, HEADER, 0xFF111A24);
-        graphics.fill(0, HEADER - 1, width, HEADER, BORDER);
-        graphics.fill(0, 0, 4, HEADER - 1, ACCENT);
-        graphics.text(font, "COMPRENDIUM", 20, 12, TEXT);
-        graphics.text(font, "REFERENCE  /  VILLAGER TRADES", 20, 32, MUTED);
-        String stats = atlas.professions().size() + " TRADERS    " + Math.round(zoom * 100) + "%";
-        graphics.text(font, stats, Math.max(220, width - font.width(stats) - 20), 23, ACCENT);
-
-        graphics.fill(0, height - FOOTER, width, height, 0xFF111A24);
-        graphics.fill(0, height - FOOTER, width, height - FOOTER + 1, BORDER);
-        graphics.text(font, "DRAG TO PAN     •     SCROLL TO ZOOM     •     ESC TO CLOSE",
-                18, height - FOOTER + 9, MUTED);
-        String note = "✦  Enchanted output preview";
-        graphics.text(font, note, Math.max(440, width - font.width(note) - 18),
-                height - FOOTER + 9, GOLD);
         if (hovered != null) {
             var stack = itemStack(hovered.ingredient(), hovered.glintPreview());
             if (!stack.isEmpty()) graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY);
         }
+        } else {
+            drawGuidePlaceholder(graphics);
+        }
+
+        // Persistent application chrome, independent from each guide canvas.
+        Ui.roundRect(graphics, 7, 7, width - 14, HEADER - 13, 12, 0xFF151D26);
+        Ui.text(graphics, Ui.uiBold("Comprendium"), 24, 22, TEXT);
+        Ui.text(graphics, Ui.ui("In-game guidebook"), 24, 43, MUTED);
+        String meta = "MC 26.3";
+        Ui.textRight(graphics, Ui.ui(meta), width - 24, 28, MUTED);
+
+        // The Modern GUI tab widget is rendered by Screen at the end of this method.
+        // A subtle rounded surface gives it a clear, stable navigation home.
+        if (guideTabs != null) {
+            Ui.roundRect(graphics, guideTabs.getX() - 9, guideTabs.getY() - 5,
+                    guideTabs.getWidth() + 18, Tabs.HEIGHT + 10, 10, 0xFF222E38);
+        }
+
+        Ui.roundRect(graphics, 7, height - FOOTER + 3, width - 14, FOOTER - 9, 9, 0xFF151D26);
+        if (section == GuideSection.TRADING) {
+            Ui.text(graphics, Ui.ui("Drag to pan   •   Scroll to zoom   •   Esc to close"),
+                    22, height - FOOTER + 12, MUTED);
+            String stats = atlas.professions().size() + " traders     " + Math.round(zoom * 100) + "% zoom";
+            Ui.textRight(graphics, Ui.ui(stats), width - 23, height - FOOTER + 12, MUTED);
+        } else {
+            Ui.text(graphics, Ui.ui("Select Trading to return to your atlas   •   Esc to close"),
+                    22, height - FOOTER + 12, MUTED);
+        }
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+    }
+
+    /** A genuinely empty future guide canvas; no placeholder trade data is invented. */
+    private void drawGuidePlaceholder(GuiGraphicsExtractor graphics) {
+        int w = Math.min(490, Math.max(200, width - 70));
+        int h = Math.min(215, Math.max(115, height - HEADER - FOOTER - 45));
+        int x = (width - w) / 2;
+        int y = HEADER + (height - HEADER - FOOTER - h) / 2;
+        Ui.roundRectBorder(graphics, x, y, w, h, 14,
+                0xFF17222D, 0xFF2A3743, 1);
+        Ui.roundRect(graphics, x + 21, y + 20, 95, 20, 10, 0xFF263B3A);
+        Ui.text(graphics, Ui.uiBold("COMING NEXT"), x + 29, y + 26, ACCENT);
+        Ui.textCentered(graphics, Ui.uiBold("A new guide starts here"),
+                width / 2, y + h / 2 - 13, TEXT);
+        Ui.textCentered(graphics, Ui.ui("This canvas is ready for future references."),
+                width / 2, y + h / 2 + 12, MUTED);
     }
 
     private boolean visible(AtlasLayout.Tile tile) {
@@ -149,11 +197,11 @@ public final class AtlasScreen extends Screen {
 
     private void panel(GuiGraphicsExtractor graphics, AtlasLayout.Tile tile) {
         int x = tile.x(), y = tile.y(), w = tile.width(), h = tile.height();
-        graphics.fill(x + 4, y + 6, x + w + 4, y + h + 6, 0x77000000);
-        graphics.fill(x, y, x + w, y + h, BORDER);
-        graphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, SURFACE);
-        graphics.fill(x + 1, y + 1, x + w - 1, y + AtlasLayout.CARD_HEADER - 6, SURFACE_TOP);
-        graphics.fill(x + 1, y + 1, x + 49, y + 3, ACCENT);
+        Ui.roundRect(graphics, x + 4, y + 6, w, h, 11, 0x66000000);
+        Ui.roundRectBorder(graphics, x, y, w, h, 11, SURFACE, BORDER, 1f);
+        Ui.roundRect(graphics, x + 1, y + 1, w - 2,
+                AtlasLayout.CARD_HEADER - 8, 10, SURFACE_TOP);
+        Ui.roundRect(graphics, x + 12, y + 11, 3, 15, 2, ACCENT);
     }
 
     private Hover drawVillager(GuiGraphicsExtractor graphics, AtlasLayout.Tile tile,
@@ -161,10 +209,10 @@ public final class AtlasScreen extends Screen {
         panel(graphics, tile);
         var p = tile.profession();
         int x = tile.x(), y = tile.y(), w = tile.width();
-        graphics.text(font, p.name(), x + 13, y + 14, TEXT);
+        Ui.text(graphics, Ui.uiBold(p.name()), x + 22, y + 15, TEXT);
         // Vanilla is the default; call out only external professions.
         if (!p.id().startsWith("minecraft:")) {
-            graphics.text(font, "MODDED  •  " + p.id(), x + 13, y + 32, ACCENT);
+            Ui.text(graphics, Ui.ui("MODDED  •  " + p.id()), x + 22, y + 34, ACCENT);
         }
         ItemStack workstation = itemStack(new Ingredient(p.workstation(), 1, "1", ""), false);
         if (!workstation.isEmpty()) {
@@ -174,6 +222,12 @@ public final class AtlasScreen extends Screen {
             graphics.pose().scale(2.6f, 2.6f);
             graphics.fakeItem(workstation, 0, 0);
             graphics.pose().popMatrix();
+            // The block is rendered through a scaled matrix, but hover testing
+            // is done in unscaled atlas coordinates (same as all trade icons).
+            if (mx >= x + 155 && mx < x + 155 + 42
+                    && my >= y + 66 && my < y + 66 + 42) {
+                hovered = new Hover(new Ingredient(p.workstation(), 1, "1", ""), false);
+            }
             hovered = drawWorkstationRecipe(graphics, p.workstation(),
                     x + 147, y + 119, mx, my, hovered);
         }
@@ -181,7 +235,8 @@ public final class AtlasScreen extends Screen {
         int cursorY = y + AtlasLayout.CARD_HEADER;
         for (var level : p.levels()) {
             int tier = Math.clamp(level.level(), 0, 5);
-            graphics.fill(x + 9, cursorY, x + w - 9, cursorY + AtlasLayout.TIER_HEIGHT - 3, 0xFF2B3948);
+            Ui.roundRect(graphics, x + 9, cursorY, w - 18,
+                    AtlasLayout.TIER_HEIGHT - 3, 4, 0xFF2B3948);
             String name = tier == 0 ? "LEVEL " + level.level() : LEVEL_NAMES[tier];
             graphics.text(font, name, x + 16, cursorY + 6, LEVEL_COLORS[tier]);
             var grouped = TradeGroups.group(level.trades());
@@ -213,8 +268,8 @@ public final class AtlasScreen extends Screen {
         for (int index = 0; index < 9; index++) {
             int ix = x + index % 3 * 18;
             int iy = y + index / 3 * 18;
-            graphics.fill(ix, iy, ix + 17, iy + 17, 0xFF30404D);
-            graphics.fill(ix + 1, iy + 1, ix + 16, iy + 16, 0xFF1B2935);
+            Ui.roundRect(graphics, ix, iy, 17, 17, 3, 0xFF30404D);
+            Ui.roundRect(graphics, ix + 1, iy + 1, 15, 15, 2, 0xFF1B2935);
             String ingredient = recipe.grid().get(index);
             if (ingredient.isEmpty()) continue;
             String sample = workstationRecipes.representative(ingredient, recipeSecond);
@@ -289,7 +344,7 @@ public final class AtlasScreen extends Screen {
                                    int x, int y, int width, float mx, float my, Hover hovered) {
         int h = display.height();
         boolean over = mx >= x && mx <= x + width && my >= y && my < y + h;
-        graphics.fill(x, y, x + width, y + h - 1, over ? 0xFF35465A : 0xFF222F3D);
+        Ui.roundRect(graphics, x, y, width, h - 1, 4, over ? 0xFF35465A : 0xFF222F3D);
         graphics.fill(x, y + h - 2, x + width, y + h - 1, 0xFF2D3B49);
         var base = display.primary();
         int paletteHeight = 8 + ((display.variants().size() + display.columns() - 1)
@@ -330,8 +385,8 @@ public final class AtlasScreen extends Screen {
                             int x, int y, int width, float mx, float my, Hover hovered) {
         boolean over = mx >= x && mx <= x + width
                 && my >= y && my <= y + AtlasLayout.ROW_HEIGHT - 1;
-        graphics.fill(x, y, x + width, y + AtlasLayout.ROW_HEIGHT - 1,
-                over ? 0xFF35465A : 0xFF222F3D);
+        Ui.roundRect(graphics, x, y, width, AtlasLayout.ROW_HEIGHT - 1,
+                4, over ? 0xFF35465A : 0xFF222F3D);
         graphics.fill(x, y + AtlasLayout.ROW_HEIGHT - 2, x + width,
                 y + AtlasLayout.ROW_HEIGHT - 1, 0xFF2D3B49);
         boolean wide = width >= 245;
@@ -433,6 +488,8 @@ public final class AtlasScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        if (section != GuideSection.TRADING || event.y() < HEADER || event.y() >= height - FOOTER)
+            return super.mouseDragged(event, dragX, dragY);
         panX += (float) dragX;
         panY += (float) dragY;
         return true;
@@ -440,6 +497,8 @@ public final class AtlasScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
+        if (section != GuideSection.TRADING || mouseY < HEADER || mouseY >= height - FOOTER)
+            return super.mouseScrolled(mouseX, mouseY, deltaX, deltaY);
         float next = Math.clamp(zoom * (float) Math.pow(1.12, deltaY), 0.22f, 2.5f);
         panX = (float) mouseX - ((float) mouseX - panX) * next / zoom;
         panY = (float) mouseY - ((float) mouseY - panY) * next / zoom;
