@@ -72,7 +72,10 @@ public final class AtlasLayout {
 
     public static int cardHeight(TradeAtlas.Profession p) {
         int result = CARD_HEADER + 16;
-        for (var level : p.levels()) result += TIER_HEIGHT + ROW_HEIGHT * level.trades().size();
+        for (var level : p.levels()) {
+            result += TIER_HEIGHT;
+            for (var display : TradeGroups.group(level.trades())) result += display.height();
+        }
         return result;
     }
 
