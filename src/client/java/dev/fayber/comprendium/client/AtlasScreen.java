@@ -16,6 +16,8 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.FontDescription;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -36,7 +38,11 @@ import java.util.Map;
  * GUI extraction does not apply that matrix to extracted 3D render states.
  */
 public final class AtlasScreen extends Screen {
+    // Atlas dimensions are logical GUI units, independent from screen zoom.
     private static final int HEADER = 82;
+    private static final float TRADE_ITEM_SCALE = 1.32f;
+    private static final float RECIPE_ITEM_SCALE = 1.42f;
+    private static final int RECIPE_CELL = 27;
     private static final int FOOTER = 34;
     private static final int BACKGROUND = 0xFF0C121B;
     private static final int SURFACE = 0xFF17212D;
@@ -195,6 +201,38 @@ public final class AtlasScreen extends Screen {
         return right > 0 && left < width && bottom > HEADER && top < height - FOOTER;
     }
 
+    /**
+     * Modern GUI's Inter glyph sheets have 1–6x raster variants.
+     * Canvas text is additionally scaled by the atlas zoom (unlike the fixed UI
+     * chrome). Select a glyph sheet for the resulting *physical* scale so large
+     * zoom doesn't simply nearest-neighbor upscale low-resolution letters.
+     */
+    private Component canvasLabel(String label, boolean bold, float extraScale) {
+        int raster = Math.clamp(Math.round(Ui.scale() * zoom * extraScale), 1, 6);
+        String family = bold ? "ui_bold_x" : "ui_x";
+        return Component.literal(label).setStyle(Style.EMPTY.withFont(
+                new FontDescription.Resource(
+                        Identifier.fromNamespaceAndPath("moderngui", family + raster))));
+    }
+
+    private void atlasText(GuiGraphicsExtractor graphics, String label, int x, int y, int color) {
+        graphics.text(font, canvasLabel(label, false, 1f), x, y, color, false);
+    }
+
+    private int atlasTextWidth(String label) {
+        return font.width(canvasLabel(label, false, 1f));
+    }
+
+    private void atlasTitle(GuiGraphicsExtractor graphics, String title, int x, int y, int maxWidth) {
+        Component sample = canvasLabel(title, true, 2f);
+        float size = Math.min(2f, maxWidth / (float) Math.max(1, font.width(sample)));
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(x, y);
+        graphics.pose().scale(size, size);
+        graphics.text(font, canvasLabel(title, true, size), 0, 0, TEXT, false);
+        graphics.pose().popMatrix();
+    }
+
     private void panel(GuiGraphicsExtractor graphics, AtlasLayout.Tile tile) {
         int x = tile.x(), y = tile.y(), w = tile.width(), h = tile.height();
         Ui.roundRect(graphics, x + 4, y + 6, w, h, 11, 0x66000000);
@@ -209,40 +247,40 @@ public final class AtlasScreen extends Screen {
         panel(graphics, tile);
         var p = tile.profession();
         int x = tile.x(), y = tile.y(), w = tile.width();
-        Ui.text(graphics, Ui.uiBold(p.name()), x + 22, y + 15, TEXT);
+        atlasTitle(graphics, p.name(), x + 18, y + 15, w - 32);
         // Vanilla is the default; call out only external professions.
         if (!p.id().startsWith("minecraft:")) {
-            Ui.text(graphics, Ui.ui("MODDED  •  " + p.id()), x + 22, y + 34, ACCENT);
+            atlasText(graphics, "MODDED  •  " + p.id(), x + 19, y + 42, ACCENT);
         }
         ItemStack workstation = itemStack(new Ingredient(p.workstation(), 1, "1", ""), false);
         if (!workstation.isEmpty()) {
             // The large job-site model sits above its actual crafting recipe.
             graphics.pose().pushMatrix();
-            graphics.pose().translate(x + 155f, y + 66f);
-            graphics.pose().scale(2.6f, 2.6f);
+            graphics.pose().translate(x + 152f, y + 43f);
+            graphics.pose().scale(3.15f, 3.15f);
             graphics.fakeItem(workstation, 0, 0);
             graphics.pose().popMatrix();
             // The block is rendered through a scaled matrix, but hover testing
             // is done in unscaled atlas coordinates (same as all trade icons).
-            if (mx >= x + 155 && mx < x + 155 + 42
-                    && my >= y + 66 && my < y + 66 + 42) {
+            if (mx >= x + 152 && mx < x + 152 + 51
+                    && my >= y + 43 && my < y + 43 + 51) {
                 hovered = new Hover(new Ingredient(p.workstation(), 1, "1", ""), false);
             }
             hovered = drawWorkstationRecipe(graphics, p.workstation(),
-                    x + 147, y + 119, mx, my, hovered);
+                    x + 134, y + 105, mx, my, hovered);
         }
-        graphics.fill(x + 12, y + 196, x + w - 12, y + 197, BORDER);
+        graphics.fill(x + 12, y + 217, x + w - 12, y + 218, BORDER);
         int cursorY = y + AtlasLayout.CARD_HEADER;
         for (var level : p.levels()) {
             int tier = Math.clamp(level.level(), 0, 5);
             Ui.roundRect(graphics, x + 9, cursorY, w - 18,
                     AtlasLayout.TIER_HEIGHT - 3, 4, 0xFF2B3948);
             String name = tier == 0 ? "LEVEL " + level.level() : LEVEL_NAMES[tier];
-            graphics.text(font, name, x + 16, cursorY + 6, LEVEL_COLORS[tier]);
+            atlasText(graphics, name, x + 16, cursorY + 9, LEVEL_COLORS[tier]);
             var grouped = TradeGroups.group(level.trades());
             String count = grouped.size() == level.trades().size()
                     ? Integer.toString(grouped.size()) : grouped.size() + " / " + level.trades().size();
-            graphics.text(font, count, x + w - font.width(count) - 17, cursorY + 6, MUTED);
+            atlasText(graphics, count, x + w - atlasTextWidth(count) - 17, cursorY + 9, MUTED);
             cursorY += AtlasLayout.TIER_HEIGHT;
             for (var display : grouped) {
                 hovered = display.grouped()
@@ -259,28 +297,35 @@ public final class AtlasScreen extends Screen {
                                         int x, int y, float mx, float my, Hover hovered) {
         CraftRecipe recipe = workstationRecipes.find(itemId);
         if (recipe == null) {
-            graphics.text(font, "RECIPE UNAVAILABLE", x - 23, y + 22, MUTED);
+            atlasText(graphics, "RECIPE UNAVAILABLE", x - 23, y + 22, MUTED);
             return hovered;
         }
         // One shared second counter makes all slots of the same ingredient tag
         // show the same type of wood/planks on each recipe frame.
         long recipeSecond = System.currentTimeMillis() / 1_000L;
         for (int index = 0; index < 9; index++) {
-            int ix = x + index % 3 * 18;
-            int iy = y + index / 3 * 18;
-            Ui.roundRect(graphics, ix, iy, 17, 17, 3, 0xFF30404D);
-            Ui.roundRect(graphics, ix + 1, iy + 1, 15, 15, 2, 0xFF1B2935);
+            int ix = x + index % 3 * RECIPE_CELL;
+            int iy = y + index / 3 * RECIPE_CELL;
+            Ui.roundRect(graphics, ix, iy, RECIPE_CELL - 1, RECIPE_CELL - 1, 5, 0xFF30404D);
+            Ui.roundRect(graphics, ix + 1, iy + 1, RECIPE_CELL - 3, RECIPE_CELL - 3, 4, 0xFF1B2935);
             String ingredient = recipe.grid().get(index);
             if (ingredient.isEmpty()) continue;
             String sample = workstationRecipes.representative(ingredient, recipeSecond);
             if (sample.isEmpty()) {
-                graphics.text(font, "?", ix + 5, iy + 4, GOLD);
+                atlasText(graphics, "?", ix + 10, iy + 9, GOLD);
             } else {
                 // An item tag chooses a representative item, not an invented recipe.
                 Ingredient entry = new Ingredient(sample, 1, "1",
                         ingredient.startsWith("#") ? ingredient : "");
-                hovered = drawItem(graphics, entry, ix + 1, iy + 1,
-                        false, mx, my, hovered);
+                graphics.pose().pushMatrix();
+                graphics.pose().translate(ix + 2f, iy + 2f);
+                graphics.pose().scale(RECIPE_ITEM_SCALE, RECIPE_ITEM_SCALE);
+                graphics.fakeItem(itemStack(entry, false), 0, 0);
+                graphics.pose().popMatrix();
+                if (mx >= ix && mx < ix + RECIPE_CELL - 1
+                        && my >= iy && my < iy + RECIPE_CELL - 1) {
+                    hovered = new Hover(entry, false);
+                }
             }
         }
         return hovered;
@@ -290,9 +335,9 @@ public final class AtlasScreen extends Screen {
                              float mx, float my, Hover hovered) {
         panel(graphics, tile);
         int x = tile.x(), y = tile.y(), w = tile.width();
-        graphics.text(font, "Wandering Trader", x + 15, y + 14, TEXT);
-        graphics.text(font, "SPECIAL TRADER  /  NO WORKSTATION", x + 15, y + 31, MUTED);
-        graphics.text(font, "BUYING  •  COMMON  •  UNCOMMON   /   RANDOM POSSIBLE OFFERS",
+        atlasText(graphics, "Wandering Trader", x + 15, y + 14, TEXT);
+        atlasText(graphics, "SPECIAL TRADER  /  NO WORKSTATION", x + 15, y + 31, MUTED);
+        atlasText(graphics, "BUYING  •  COMMON  •  UNCOMMON   /   RANDOM POSSIBLE OFFERS",
                 x + 140, y + 95, MUTED);
 
         List<TraderRow> trades = new ArrayList<>();
@@ -315,7 +360,7 @@ public final class AtlasScreen extends Screen {
                     ? TRADER_POOL_NAMES[pool] : "POOL " + pool;
             graphics.fill(cx, y + AtlasLayout.CARD_HEADER, cx + colWidth,
                     y + AtlasLayout.CARD_HEADER + 20, 0xFF2B3948);
-            graphics.text(font, name, cx + 7, y + AtlasLayout.CARD_HEADER + 5, ACCENT);
+            atlasText(graphics, name, cx + 7, y + AtlasLayout.CARD_HEADER + 5, ACCENT);
             for (int index = from; index < end; index++) {
                 TraderRow row = trades.get(index);
                 int iy = y + AtlasLayout.CARD_HEADER + 24
@@ -326,7 +371,7 @@ public final class AtlasScreen extends Screen {
                     int group = row.pool();
                     String groupLabel = group >= 1 && group < TRADER_POOL_NAMES.length
                             ? TRADER_POOL_NAMES[group] : "POOL " + group;
-                    graphics.text(font, groupLabel, cx + 7, iy + 8, ACCENT);
+                    atlasText(graphics, groupLabel, cx + 7, iy + 8, ACCENT);
                 } else {
                     hovered = drawTrade(graphics, row.trade(), cx, iy, colWidth, mx, my, hovered);
                 }
@@ -347,22 +392,22 @@ public final class AtlasScreen extends Screen {
         Ui.roundRect(graphics, x, y, width, h - 1, 4, over ? 0xFF35465A : 0xFF222F3D);
         graphics.fill(x, y + h - 2, x + width, y + h - 1, 0xFF2D3B49);
         var base = display.primary();
-        int paletteHeight = 8 + ((display.variants().size() + display.columns() - 1)
-                / display.columns()) * 18;
+        int paletteHeight = 10 + ((display.variants().size() + display.columns() - 1)
+                / display.columns()) * 24;
         int fixedY = y + (paletteHeight - 16) / 2;
         if (display.inputVariants()) {
-            graphics.text(font, "→", x + 145, fixedY + 2, ACCENT);
+            atlasText(graphics, "→", x + 145, fixedY + 6, ACCENT);
             hovered = drawItem(graphics, base.gives(), x + 177, fixedY,
                     base.glintPreview(), mx, my, hovered);
         } else {
             hovered = drawItem(graphics, base.wants(), x + 8, fixedY, false, mx, my, hovered);
             if (base.additionalWants() != null) {
-                graphics.text(font, "+", x + 29, fixedY + 3, MUTED);
+                atlasText(graphics, "+", x + 29, fixedY + 3, MUTED);
                 hovered = drawItem(graphics, base.additionalWants(), x + 41, fixedY,
                         false, mx, my, hovered);
-                graphics.text(font, "→", x + 68, fixedY + 2, ACCENT);
+                atlasText(graphics, "→", x + 68, fixedY + 2, ACCENT);
             } else {
-                graphics.text(font, "→", x + 54, fixedY + 2, ACCENT);
+                atlasText(graphics, "→", x + 54, fixedY + 2, ACCENT);
             }
         }
         int paletteX = display.inputVariants() ? x + 8 :
@@ -371,12 +416,12 @@ public final class AtlasScreen extends Screen {
             var variant = display.variants().get(i);
             Ingredient ingredient = display.inputVariants() ? variant.wants() : variant.gives();
             hovered = drawItem(graphics, ingredient,
-                    paletteX + (i % display.columns()) * 16,
-                    y + 4 + (i / display.columns()) * 18,
+                    paletteX + (i % display.columns()) * 23,
+                    y + 5 + (i / display.columns()) * 24,
                     false, mx, my, hovered);
         }
         if (display.biomeDependent()) {
-            graphics.text(font, "BIOME-DEPENDENT OPTIONS", x + 10, y + h - 12, MUTED);
+            atlasText(graphics, "BIOME-DEPENDENT OPTIONS", x + 10, y + h - 12, MUTED);
         }
         return hovered;
     }
@@ -392,19 +437,19 @@ public final class AtlasScreen extends Screen {
         boolean wide = width >= 245;
         int arrow = wide ? x + 132 : x + 112;
         int output = wide ? x + 171 : x + 145;
-        hovered = drawItem(graphics, trade.wants(), x + 10, y + 4, false, mx, my, hovered);
+        hovered = drawItem(graphics, trade.wants(), x + 10, y + 6, false, mx, my, hovered);
         if (trade.additionalWants() != null) {
-            graphics.text(font, "+", x + 51, y + 9, MUTED);
-            hovered = drawItem(graphics, trade.additionalWants(), x + 65, y + 4,
+            atlasText(graphics, "+", x + 49, y + 11, MUTED);
+            hovered = drawItem(graphics, trade.additionalWants(), x + 64, y + 6,
                     false, mx, my, hovered);
         }
-        graphics.text(font, "→", arrow, y + 8, ACCENT);
-        hovered = drawItem(graphics, trade.gives(), output, y + 4,
+        atlasText(graphics, "→", arrow, y + 11, ACCENT);
+        hovered = drawItem(graphics, trade.gives(), output, y + 6,
                 trade.glintPreview(), mx, my, hovered);
         if (trade.glintPreview()) {
-            graphics.text(font, "✦", x + width - 17, y + 8, GOLD);
+            atlasText(graphics, "✦", x + width - 17, y + 11, GOLD);
         } else if (trade.conditional() || trade.modified()) {
-            graphics.text(font, "·", x + width - 15, y + 8, MUTED);
+            atlasText(graphics, "·", x + width - 15, y + 11, MUTED);
         }
         return hovered;
     }
@@ -414,15 +459,19 @@ public final class AtlasScreen extends Screen {
         if (ingredient == null) return hovered;
         ItemStack stack = itemStack(ingredient, glint);
         if (stack.isEmpty()) {
-            graphics.text(font, "?", x + 4, y + 5, GOLD);
+            atlasText(graphics, "?", x + 6, y + 7, GOLD);
         } else {
-            graphics.fakeItem(stack, x, y);
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(x, y);
+            graphics.pose().scale(TRADE_ITEM_SCALE, TRADE_ITEM_SCALE);
+            graphics.fakeItem(stack, 0, 0);
+            graphics.pose().popMatrix();
             String amount = ingredient.amount();
             if (amount != null && !amount.equals("1")) {
-                graphics.text(font, amount, x + 16 - font.width(amount), y + 12, TEXT);
+                atlasText(graphics, amount, x + 21 - atlasTextWidth(amount), y + 15, TEXT);
             }
         }
-        return mx >= x && mx < x + 18 && my >= y && my < y + 18
+        return mx >= x && mx < x + 22 && my >= y && my < y + 22
                 ? new Hover(ingredient, glint) : hovered;
     }
 
@@ -445,14 +494,14 @@ public final class AtlasScreen extends Screen {
 
     private void drawPreview(GuiGraphicsExtractor graphics, AtlasLayout.Tile tile) {
         // The preview is culled using SCREEN coordinates, not local canvas coordinates.
-        float sx = panX + (tile.x() + 12) * zoom;
-        float sy = panY + (tile.y() + 58) * zoom;
-        float ex = panX + (tile.x() + 132) * zoom;
-        float ey = panY + (tile.y() + 180) * zoom;
+        float sx = panX + (tile.x() + 9) * zoom;
+        float sy = panY + (tile.y() + 62) * zoom;
+        float ex = panX + (tile.x() + 136) * zoom;
+        float ey = panY + (tile.y() + 209) * zoom;
         if (ex < 0 || sx > width || ey < HEADER || sy > height - FOOTER) return;
         LivingEntity entity = model(tile.profession().id());
         if (entity == null) return;
-        int size = Math.max(1, Math.round(42 * zoom));
+        int size = Math.max(1, Math.round(55 * zoom));
         // The preview helper uses *absolute pixel deltas* from the supplied
         // cursor position to calculate its angle. Scaling those deltas with zoom
         // caused the villagers to rotate whenever the user zoomed the atlas.
