@@ -1,6 +1,7 @@
 package dev.fayber.comprendium.client;
 
 import dev.fayber.comprendium.data.AtlasLayout;
+import dev.fayber.comprendium.data.CraftRecipe;
 import dev.fayber.comprendium.data.TradeGroups;
 import dev.fayber.comprendium.data.TradeAtlas;
 import dev.fayber.comprendium.data.TradeAtlas.Ingredient;
@@ -58,6 +59,7 @@ public final class AtlasScreen extends Screen {
     private final Map<String, LivingEntity> models = new HashMap<>();
     private final Map<String, ItemStack> items = new HashMap<>();
     private int nextPreviewEntityId = -1;
+    private WorkstationRecipes workstationRecipes;
     private TradeAtlas lastAtlas;
     private AtlasLayout.Layout layout;
     private record Hover(Ingredient ingredient, boolean glintPreview) {}
@@ -73,6 +75,7 @@ public final class AtlasScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         TradeAtlas atlas = ComprendiumClient.atlas();
+        if (workstationRecipes == null) workstationRecipes = WorkstationRecipes.load();
         if (layout == null || lastAtlas != atlas) {
             layout = AtlasLayout.arrange(atlas.professions());
             lastAtlas = atlas;
@@ -163,20 +166,18 @@ public final class AtlasScreen extends Screen {
         if (!p.id().startsWith("minecraft:")) {
             graphics.text(font, "MODDED  •  " + p.id(), x + 13, y + 32, ACCENT);
         }
-        graphics.text(font, "WORKSTATION", x + 145, y + 63, MUTED);
         ItemStack workstation = itemStack(new Ingredient(p.workstation(), 1, "1", ""), false);
         if (!workstation.isEmpty()) {
-            // Workstation is still Minecraft's genuine item/block render, not a PNG.
-            // Scaling in the GUI pose makes the actual block visible at normal zoom.
+            // The large job-site model sits above its actual crafting recipe.
             graphics.pose().pushMatrix();
-            graphics.pose().translate(x + 162f, y + 78f);
-            graphics.pose().scale(1.9f, 1.9f);
+            graphics.pose().translate(x + 155f, y + 66f);
+            graphics.pose().scale(2.6f, 2.6f);
             graphics.fakeItem(workstation, 0, 0);
             graphics.pose().popMatrix();
-        } else {
-            graphics.text(font, "—", x + 172, y + 91, MUTED);
+            hovered = drawWorkstationRecipe(graphics, p.workstation(),
+                    x + 147, y + 119, mx, my, hovered);
         }
-        graphics.fill(x + 12, y + 119, x + w - 12, y + 120, BORDER);
+        graphics.fill(x + 12, y + 196, x + w - 12, y + 197, BORDER);
         int cursorY = y + AtlasLayout.CARD_HEADER;
         for (var level : p.levels()) {
             int tier = Math.clamp(level.level(), 0, 5);
@@ -193,6 +194,35 @@ public final class AtlasScreen extends Screen {
                         ? drawGroupedTrade(graphics, display, x + 9, cursorY, w - 18, mx, my, hovered)
                         : drawTrade(graphics, display.primary(), x + 9, cursorY, w - 18, mx, my, hovered);
                 cursorY += display.height();
+            }
+        }
+        return hovered;
+    }
+
+    /** Compact 3x3 native item grid, using the recipe currently packaged in the game/mod JARs. */
+    private Hover drawWorkstationRecipe(GuiGraphicsExtractor graphics, String itemId,
+                                        int x, int y, float mx, float my, Hover hovered) {
+        CraftRecipe recipe = workstationRecipes.find(itemId);
+        if (recipe == null) {
+            graphics.text(font, "RECIPE UNAVAILABLE", x - 23, y + 22, MUTED);
+            return hovered;
+        }
+        for (int index = 0; index < 9; index++) {
+            int ix = x + index % 3 * 18;
+            int iy = y + index / 3 * 18;
+            graphics.fill(ix, iy, ix + 17, iy + 17, 0xFF30404D);
+            graphics.fill(ix + 1, iy + 1, ix + 16, iy + 16, 0xFF1B2935);
+            String ingredient = recipe.grid().get(index);
+            if (ingredient.isEmpty()) continue;
+            String sample = workstationRecipes.representative(ingredient);
+            if (sample.isEmpty()) {
+                graphics.text(font, "?", ix + 5, iy + 4, GOLD);
+            } else {
+                // An item tag chooses a representative item, not an invented recipe.
+                Ingredient entry = new Ingredient(sample, 1, "1",
+                        ingredient.startsWith("#") ? ingredient : "");
+                hovered = drawItem(graphics, entry, ix + 1, iy + 1,
+                        false, mx, my, hovered);
             }
         }
         return hovered;
@@ -343,14 +373,14 @@ public final class AtlasScreen extends Screen {
 
     private void drawPreview(GuiGraphicsExtractor graphics, AtlasLayout.Tile tile) {
         // The preview is culled using SCREEN coordinates, not local canvas coordinates.
-        float sx = panX + (tile.x() + 17) * zoom;
-        float sy = panY + (tile.y() + 49) * zoom;
-        float ex = panX + (tile.x() + 128) * zoom;
-        float ey = panY + (tile.y() + 115) * zoom;
+        float sx = panX + (tile.x() + 12) * zoom;
+        float sy = panY + (tile.y() + 58) * zoom;
+        float ex = panX + (tile.x() + 132) * zoom;
+        float ey = panY + (tile.y() + 180) * zoom;
         if (ex < 0 || sx > width || ey < HEADER || sy > height - FOOTER) return;
         LivingEntity entity = model(tile.profession().id());
         if (entity == null) return;
-        int size = Math.max(1, Math.round(31 * zoom));
+        int size = Math.max(1, Math.round(42 * zoom));
         // The preview helper uses *absolute pixel deltas* from the supplied
         // cursor position to calculate its angle. Scaling those deltas with zoom
         // caused the villagers to rotate whenever the user zoomed the atlas.

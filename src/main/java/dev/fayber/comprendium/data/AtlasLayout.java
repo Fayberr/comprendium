@@ -8,7 +8,7 @@ import java.util.List;
 public final class AtlasLayout {
     public static final int CARD_WIDTH = 232;
     public static final int CARD_GAP = 20;
-    public static final int CARD_HEADER = 132;
+    public static final int CARD_HEADER = 207;
     public static final int ROW_HEIGHT = 27;
     public static final int TIER_HEIGHT = 24;
     public static final int ROW_GAP = 28;
