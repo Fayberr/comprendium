@@ -50,14 +50,14 @@ public final class TradeGroups {
         public TradeAtlas.Trade primary() { return variants.getFirst(); }
         public boolean grouped() { return variants.size() >= 3; }
         public int columns() {
-            return primary().additionalWants() != null ? 7 : 8;
+            return primary().additionalWants() != null ? 5 : 6;
         }
         public boolean biomeDependent() {
             return primary().conditional();
         }
         public int height() {
             if (!grouped()) return AtlasLayout.ROW_HEIGHT;
-            return 8 + ((variants.size() + columns() - 1) / columns()) * 18
+            return 10 + ((variants.size() + columns() - 1) / columns()) * 24
                     + (biomeDependent() ? 13 : 0);
         }
     }

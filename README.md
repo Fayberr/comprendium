@@ -64,3 +64,11 @@ The universal Comprendium JAR **bundles** [Modern GUI](https://github.com/Fayber
 For local builds, first checkout the pinned Modern GUI `fabric/26.3` revision and run `gradle publishToMavenLocal` with Java 25, then build Comprendium normally. The bundled Modern GUI library is LGPL-3.0-or-later; its source and license are available upstream and in its nested JAR. Comprendium's own source remains MIT licensed.
 
 Modern GUI is client-only. Comprendium's networking and server code do not reference GUI APIs; the universal JAR still runs on a dedicated server.
+
+## Readability and scaled rendering (0.3.1)
+
+- 3×3 workstation recipe cell pitch increased from 18 to 27 GUI units (50% bigger) with proportionally larger native item renders. The workstation render is slightly larger and moved upward.
+- Profession titles use approximately 2× text scale, reducing size only for names too long to fit their card; villager previews are enlarged.
+- Trade item previews use 1.32× native rendering scale and matching hitboxes; trade tiers, compact groups, and row geometry were adjusted to prevent overlaps.
+- Atlas labels now use the bundled Modern GUI Inter fonts instead of Minecraft's bitmap GUI font. Their glyph atlas oversampling adapts to the combined Minecraft GUI scale, Comprendium zoom, and optional title scale. This improves smoothness especially at enlarged zoom, though extremely high zoom can still show some pixels because Modern GUI currently supplies glyph atlases up to 6× oversampling.
+- The header/footer remain at fixed screen size; the atlas canvas (including tooltips) still pans and zooms as before.
