@@ -170,8 +170,8 @@ public final class AtlasScreen extends Screen {
         if (!workstation.isEmpty()) {
             // The large job-site model sits above its actual crafting recipe.
             graphics.pose().pushMatrix();
-            graphics.pose().translate(x + 160f, y + 67f);
-            graphics.pose().scale(2.1f, 2.1f);
+            graphics.pose().translate(x + 155f, y + 66f);
+            graphics.pose().scale(2.6f, 2.6f);
             graphics.fakeItem(workstation, 0, 0);
             graphics.pose().popMatrix();
             hovered = drawWorkstationRecipe(graphics, p.workstation(),
