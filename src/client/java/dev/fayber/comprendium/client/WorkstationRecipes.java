@@ -6,12 +6,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.fayber.comprendium.Comprendium;
 import dev.fayber.comprendium.data.CraftRecipe;
+import dev.fayber.comprendium.data.TagChoices;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,37 +28,28 @@ import net.minecraft.world.item.Items;
  */
 public final class WorkstationRecipes {
     private final Map<String, CraftRecipe> byOutput;
-    private final Map<String, List<String>> tags;
+    private final TagChoices choices;
 
     private WorkstationRecipes(Map<String, CraftRecipe> recipes, Map<String, List<String>> tags) {
         this.byOutput = Map.copyOf(recipes);
-        this.tags = Map.copyOf(tags);
+        this.choices = new TagChoices(tags, WorkstationRecipes::registeredItem);
     }
 
     public CraftRecipe find(String outputItem) {
         return byOutput.get(outputItem);
     }
 
-    public String representative(String ingredient) {
-        if (ingredient == null || ingredient.isBlank()) return "";
-        if (!ingredient.startsWith("#")) return ingredient;
-        return member(ingredient.substring(1), new java.util.HashSet<>(), 0);
+    public String representative(String ingredient, long epochSeconds) {
+        return choices.representative(ingredient, epochSeconds);
     }
 
-    private String member(String tag, java.util.Set<String> seen, int depth) {
-        if (depth > 16 || !seen.add(tag)) return "";
-        for (String candidate : tags.getOrDefault(tag, List.of())) {
-            String id = candidate.startsWith("#")
-                    ? member(candidate.substring(1), seen, depth + 1)
-                    : candidate;
-            if (!id.isEmpty()) {
-                try {
-                    var item = BuiltInRegistries.ITEM.getValue(Identifier.parse(id));
-                    if (item != null && item != Items.AIR) return id;
-                } catch (RuntimeException ignored) { }
-            }
+    private static boolean registeredItem(String id) {
+        try {
+            var item = BuiltInRegistries.ITEM.getValue(Identifier.parse(id));
+            return item != null && item != Items.AIR;
+        } catch (RuntimeException ignored) {
+            return false;
         }
-        return "";
     }
 
     public static WorkstationRecipes load() {
