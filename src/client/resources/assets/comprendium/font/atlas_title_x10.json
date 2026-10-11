@@ -1,0 +1,26 @@
+{
+  "providers": [
+    {
+      "type": "ttf",
+      "file": "moderngui:inter_semibold.ttf",
+      "shift": [
+        0,
+        0
+      ],
+      "size": 18,
+      "oversample": 10
+    },
+    {
+      "type": "reference",
+      "id": "minecraft:include/space"
+    },
+    {
+      "type": "reference",
+      "id": "minecraft:include/default"
+    },
+    {
+      "type": "reference",
+      "id": "minecraft:include/unifont"
+    }
+  ]
+}
