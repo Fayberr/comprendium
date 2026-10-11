@@ -4,18 +4,27 @@
   "version": "${version}",
   "name": "Comprendium",
   "description": "An interactive in-game Minecraft reference atlas, with optional server trade synchronization.",
-  "authors": ["Fayber"],
-  "contact": { "sources": "https://github.com/Fayberr/comprendium" },
+  "authors": [
+    "Fayber"
+  ],
+  "contact": {
+    "sources": "https://github.com/Fayberr/comprendium"
+  },
   "license": "MIT",
   "environment": "*",
   "entrypoints": {
-    "main": ["dev.fayber.comprendium.Comprendium"],
-    "client": ["dev.fayber.comprendium.client.ComprendiumClient"]
+    "main": [
+      "dev.fayber.comprendium.Comprendium"
+    ],
+    "client": [
+      "dev.fayber.comprendium.client.ComprendiumClient"
+    ]
   },
   "depends": {
     "fabricloader": ">=0.19.5",
     "minecraft": "26.3",
     "java": ">=25",
     "fabric-api": "*"
-  }
+  },
+  "icon": "assets/comprendium/icon.png"
 }

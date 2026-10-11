@@ -1,5 +1,7 @@
 # Comprendium
 
+[Modrinth](https://modrinth.com/mod/comprendium)
+
 A visual, interactive reference atlas for **Minecraft 26.3** on **Fabric**. The first chart is villager trades, presented in balanced rows you can freely pan and zoom. The Wandering Trader gets a separate multi-column panel showing buying, common, and uncommon pools. More charts (brewing, mining, mechanics) are intended to be added later.
 
 ## Goals
