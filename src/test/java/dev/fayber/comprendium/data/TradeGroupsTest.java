@@ -30,7 +30,7 @@ class TradeGroupsTest {
         assertEquals(1, grouped.size());
         assertEquals(16, grouped.getFirst().variants().size());
         assertFalse(grouped.getFirst().inputVariants());
-        assertEquals(44, grouped.getFirst().height());
+        assertEquals(82, grouped.getFirst().height());
         for (int i = 0; i < COLORS.length; i++)
             assertEquals(originals.get(i), grouped.getFirst().variants().get(i));
     }
@@ -73,7 +73,7 @@ class TradeGroupsTest {
                 trade(color, item("emerald", 1), item(color + "_glazed_terracotta", 1)));
         var p = new TradeAtlas.Profession("minecraft:mason", "Mason", "minecraft:stonecutter",
                 List.of(new TradeAtlas.Level(4, trades, "1")));
-        assertEquals(AtlasLayout.CARD_HEADER + 16 + AtlasLayout.TIER_HEIGHT + 44,
+        assertEquals(AtlasLayout.CARD_HEADER + 16 + AtlasLayout.TIER_HEIGHT + 82,
                 AtlasLayout.cardHeight(p));
         assertEquals(16, p.levels().getFirst().trades().size());
     }
