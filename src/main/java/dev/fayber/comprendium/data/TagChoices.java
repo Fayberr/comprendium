@@ -1,6 +1,6 @@
 package dev.fayber.comprendium.data;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -14,6 +14,7 @@ public final class TagChoices {
     private static final int MAX_CANDIDATES = 1024;
     private final Map<String, List<String>> tags;
     private final Predicate<String> validItem;
+    private final Map<String, List<String>> cache = new HashMap<>();
 
     public TagChoices(Map<String, List<String>> tags, Predicate<String> validItem) {
         this.tags = Map.copyOf(tags);
@@ -32,9 +33,11 @@ public final class TagChoices {
         if (ingredient == null || ingredient.isBlank()) return List.of();
         if (!ingredient.startsWith("#"))
             return validItem.test(ingredient) ? List.of(ingredient) : List.of();
-        LinkedHashSet<String> options = new LinkedHashSet<>();
-        collect(ingredient.substring(1), new HashSet<>(), options, 0);
-        return List.copyOf(options);
+        return cache.computeIfAbsent(ingredient, tag -> {
+            LinkedHashSet<String> options = new LinkedHashSet<>();
+            collect(tag.substring(1), new HashSet<>(), options, 0);
+            return List.copyOf(options);
+        });
     }
 
     private void collect(String tag, Set<String> visiting, LinkedHashSet<String> options, int depth) {
