@@ -9,14 +9,14 @@ import java.util.List;
  * Game item IDs are interpreted locally by the receiving client.
  */
 public record TradeAtlas(int protocol, String source, List<Profession> professions) {
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
     public static final int MAX_JSON_CHARS = 1_000_000;
     private static final Gson GSON = new Gson();
 
     public record Profession(String id, String name, String workstation, List<Level> levels) {}
     public record Level(int level, List<Trade> trades, String selection) {}
     public record Trade(String id, Ingredient wants, Ingredient additionalWants, Ingredient gives,
-                        boolean conditional, boolean modified) {}
+                        boolean conditional, boolean modified, boolean glintPreview) {}
     public record Ingredient(String id, int count, String amount, String details) {}
 
     public String toJson() {
