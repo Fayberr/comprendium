@@ -79,3 +79,7 @@ Modern GUI is client-only. Comprendium's networking and server code do not refer
 - The green vertical profession accent now uses the final heading height, including any name fitting. The same styling applies to the Wandering Trader heading.
 - Trade item quantities use Minecraft's **vanilla item-stack pixel font with shadow**. Trading labels and UI chrome still use Modern GUI's Inter font.
 - Other atlas geometry, trade metadata and server synchronization are unchanged.
+
+### Title accent alignment (0.3.3)
+
+- Aligns the green profession accent to the **visible cap-height** of Inter Semibold instead of the font draw anchor. The accent now starts at the top of the title letters and scales proportionally for longer names. No changes to rendering of trade items, fonts, recipes, tabs, or networking.
