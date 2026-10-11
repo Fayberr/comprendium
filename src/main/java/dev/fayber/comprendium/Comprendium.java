@@ -16,7 +16,7 @@ public final class Comprendium implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        PayloadTypeRegistry.playS2C().register(AtlasPayload.TYPE, AtlasPayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(AtlasPayload.TYPE, AtlasPayload.CODEC);
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 server.execute(() -> send(server, handler.getPlayer())));
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, manager, success) -> {
