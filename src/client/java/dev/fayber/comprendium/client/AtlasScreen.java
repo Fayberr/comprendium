@@ -44,6 +44,8 @@ public final class AtlasScreen extends Screen {
     private float panX = 28;
     private float panY = TITLE_HEIGHT + 16;
     private final Map<String, Villager> models = new HashMap<>();
+    // These client-only preview entities never enter the world entity manager.
+    private int nextPreviewEntityId = -1;
     private final Map<String, ItemStack> items = new HashMap<>();
     private TradeAtlas snapshot;
 
@@ -184,9 +186,15 @@ public final class AtlasScreen extends Screen {
         return models.computeIfAbsent(professionId, id -> {
             try {
                 Villager entity = EntityTypes.VILLAGER.create(minecraft.level, EntitySpawnReason.COMMAND);
-                if (entity != null) entity.setVillagerData(entity.getVillagerData().withProfession(
-                        minecraft.level.registryAccess(),
-                        ResourceKey.create(Registries.VILLAGER_PROFESSION, Identifier.parse(id))));
+                if (entity != null) {
+                    // ClientLevel doesn't allocate IDs for newly constructed entities.
+                    // 26.3 render extraction calls getId(), which rejects the unassigned ID 0.
+                    // Unique negative IDs keep GUI previews separate from real server entities.
+                    entity.setId(nextPreviewEntityId--);
+                    entity.setVillagerData(entity.getVillagerData().withProfession(
+                            minecraft.level.registryAccess(),
+                            ResourceKey.create(Registries.VILLAGER_PROFESSION, Identifier.parse(id))));
+                }
                 return entity;
             } catch (RuntimeException ex) {
                 return null;
