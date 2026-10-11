@@ -7,7 +7,7 @@ A visual, interactive reference atlas for **Minecraft 26.3** on **Fabric**. The 
 - Native Minecraft GUI, true 3D villager previews, workstation and trade item renders: not a static PNG.
 - Profession columns with Novice through Master trades, including additional costs and conditional/modifier markers.
 - Dynamically discover profession and trade-set definitions on the active server, including singleplayer integrated servers, server datapacks, and compatible Fabric mods.
-- A **universal** JAR: optional installation on both the client and Fabric server shares the server's current catalog; without a server installation the client UI still opens, but unknown server-side trade definitions cannot be reconstructed.
+- A **universal** JAR: optional installation on both the client and Fabric server shares the server's current catalog; without a server installation, the client loads the vanilla reference directly from the installed Minecraft 26.3 game JAR; unknown server-side custom trade definitions cannot be reconstructed.
 - Trade definitions are possible offers, **not** hidden offers of specific villagers. Randomized prices, probabilities and item components may require extra inspection to interpret correctly.
 - Lightweight, versioned server-to-client snapshot format, validated on receipt.
 
@@ -31,7 +31,7 @@ CI compiles and uploads JARs. Java classes in `src/main` must not reference clie
 
 ### Data limitations
 
-- Unmodified servers do not send their server-side registries just because the client has this mod. They require an installed Comprendium for authoritative synchronization.
+- Servers without Comprendium do not send their server-side trade registries. On these servers, Comprendium renders a vanilla chart extracted from the local game JAR, which cannot reflect custom server-only datapacks or plugins.
 - Mods changing trades using arbitrary Java logic may not expose enumerable static definitions.
 - The exported data is **reference metadata**, not live `MerchantOffer` instances. Random ranges and enchantment-related conditions cannot always be displayed as a single exact item.
 - A dedicated server cannot directly render or inspect client-only entity models; that is handled client-side.
