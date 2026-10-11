@@ -1,15 +1,15 @@
 # Comprendium
 
-A visual, interactive reference atlas for **Minecraft 26.3** on **Fabric**. The first chart is villager trades, shown as a single large canvas you can freely pan and zoom. More charts (brewing, mining, mechanics) are intended to be added later.
+A visual, interactive reference atlas for **Minecraft 26.3** on **Fabric**. The first chart is villager trades, presented in balanced rows you can freely pan and zoom. The Wandering Trader gets a separate multi-column panel showing buying, common, and uncommon pools. More charts (brewing, mining, mechanics) are intended to be added later.
 
 ## Goals
 
 - Native Minecraft GUI, true 3D villager previews, workstation and trade item renders: not a static PNG.
-- Profession columns with Novice through Master trades, including additional costs and conditional/modifier markers.
+- Professions arranged across multiple rows, with Novice through Master trades and a dedicated wide Wandering Trader section.\n- GUI-only 3D entities are projected into viewport coordinates so they remain attached to their cards while panning and zooming.\n- Enchantment glint previews for output items enchanted by trade modifiers. The glow represents a potentially enchanted result, not a particular randomized enchantment.\n- Additional costs and conditional/modifier markers.
 - Dynamically discover profession and trade-set definitions on the active server, including singleplayer integrated servers, server datapacks, and compatible Fabric mods.
 - A **universal** JAR: optional installation on both the client and Fabric server shares the server's current catalog; without a server installation, the client loads the vanilla reference directly from the installed Minecraft 26.3 game JAR; unknown server-side custom trade definitions cannot be reconstructed.
 - Trade definitions are possible offers, **not** hidden offers of specific villagers. Randomized prices, probabilities and item components may require extra inspection to interpret correctly.
-- Lightweight, versioned server-to-client snapshot format, validated on receipt.
+- Lightweight, versioned v2 server-to-client snapshot format, validated on receipt.
 
 ## Install / controls
 

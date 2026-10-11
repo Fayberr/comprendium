@@ -78,11 +78,22 @@ public final class VanillaAtlas {
         for (var entry : sets.entrySet()) {
             String path = entry.getKey().substring("minecraft:".length());
             String[] parts = path.split("/");
-            if (parts.length != 2 || !parts[1].startsWith("level_")) continue;
+            if (parts.length != 2) continue;
             int tier;
-            try { tier = Integer.parseInt(parts[1].substring(6)); }
-            catch (NumberFormatException ex) { continue; }
-            if (tier < 1 || tier > 5 || parts[0].equals("wandering_trader")) continue;
+            if (parts[0].equals("wandering_trader")) {
+                tier = switch (parts[1]) {
+                    case "buying" -> 1;
+                    case "common" -> 2;
+                    case "uncommon" -> 3;
+                    default -> -1;
+                };
+                if (tier < 0) continue;
+            } else {
+                if (!parts[1].startsWith("level_")) continue;
+                try { tier = Integer.parseInt(parts[1].substring(6)); }
+                catch (NumberFormatException ex) { continue; }
+                if (tier < 1 || tier > 5) continue;
+            }
             JsonObject set = entry.getValue();
             List<String> refs = new ArrayList<>();
             if (set.has("trades")) expand(set.get("trades"), tags, refs, new HashSet<>());
@@ -93,7 +104,8 @@ public final class VanillaAtlas {
                 possibilities.add(new TradeAtlas.Trade(id, ingredient(trade.get("wants")),
                         ingredient(trade.get("additional_wants")), ingredient(trade.get("gives")),
                         trade.has("merchant_predicate"),
-                        trade.has("given_item_modifier") || trade.has("double_trade_price_enchantments")));
+                        trade.has("given_item_modifier") || trade.has("double_trade_price_enchantments"),
+                        hasEnchantments(trade.get("given_item_modifier")) || hasEnchantments(trade.get("gives"))));
             }
             String selection = set.has("amount") ? set.get("amount").toString() : "variable";
             levels.computeIfAbsent(parts[0], k -> new ArrayList<>())
@@ -103,6 +115,11 @@ public final class VanillaAtlas {
         List<TradeAtlas.Profession> professions = new ArrayList<>();
         for (var entry : levels.entrySet()) {
             String id = "minecraft:" + entry.getKey();
+            if (entry.getKey().equals("wandering_trader")) {
+                entry.getValue().sort(Comparator.comparingInt(TradeAtlas.Level::level));
+                professions.add(new TradeAtlas.Profession(id, "Wandering Trader", "", entry.getValue()));
+                continue;
+            }
             VillagerProfession profession;
             try { profession = BuiltInRegistries.VILLAGER_PROFESSION.getValue(Identifier.parse(id)); }
             catch (Exception ex) { continue; }
@@ -149,6 +166,21 @@ public final class VanillaAtlas {
         } else {
             resolved.add(id.contains(":") ? id : "minecraft:" + id);
         }
+    }
+
+    private static boolean hasEnchantments(JsonElement element) {
+        if (element == null || element.isJsonNull()) return false;
+        if (element.isJsonArray()) {
+            for (var e : element.getAsJsonArray()) if (hasEnchantments(e)) return true;
+        } else if (element.isJsonObject()) {
+            JsonObject o = element.getAsJsonObject();
+            if (o.has("type") && o.get("type").isJsonPrimitive()
+                    && o.get("type").getAsString().contains("enchant")) return true;
+            if (o.has("enchantments") || o.has("minecraft:enchantments")
+                    || o.has("minecraft:stored_enchantments")) return true;
+            for (var e : o.entrySet()) if (hasEnchantments(e.getValue())) return true;
+        }
+        return false;
     }
 
     private static TradeAtlas.Ingredient ingredient(JsonElement value) {
