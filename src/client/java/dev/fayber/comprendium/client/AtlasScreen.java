@@ -250,10 +250,13 @@ public final class AtlasScreen extends Screen {
         // The GUI scale and atlas zoom both affect how many display pixels a
         // single text glyph occupies. Choose a matching TTF atlas resolution.
         int oversample = nearestTitleRaster(Ui.scale() * zoom * fit);
-        float visibleHeight = 18f * fit;
-        // Move the profession accent from the unscaled card shell to the title
-        // so its height always follows the title itself (including long names).
-        Ui.roundRect(graphics, x - 7f, y, 4f, visibleHeight,
+        // GUI text coordinates describe its baseline region, not the visible
+        // glyph's upper edge. Inter's 18px capitals extend about 7 units ABOVE
+        // that anchor; previously the green accent started at y and appeared
+        // roughly half a letter too low. Track the visible cap-height instead.
+        float capHeight = 15.5f * fit;
+        float capTop = y - 7f * fit;
+        Ui.roundRect(graphics, x - 7f, capTop, 4f, capHeight,
                 2f, ACCENT);
         graphics.pose().pushMatrix();
         graphics.pose().translate(x, y);
