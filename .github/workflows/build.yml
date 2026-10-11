@@ -17,6 +17,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.7.1'
+      - uses: actions/checkout@v4
+        with:
+          repository: Fayberr/modern-gui
+          ref: 785e5c0f7b5d95c334955af1372674a588d9a362
+          path: _modern-gui
+      - name: Build modern-gui for Minecraft 26.3
+        run: gradle --no-daemon -p _modern-gui publishToMavenLocal
       - name: Compile, test and remap
         run: gradle --no-daemon build
       - uses: actions/upload-artifact@v4
