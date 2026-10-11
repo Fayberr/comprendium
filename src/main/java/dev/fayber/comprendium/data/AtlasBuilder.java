@@ -17,6 +17,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.item.trading.TradeSet;
+import net.minecraft.world.item.trading.TradeSets;
 import net.minecraft.world.item.trading.VillagerTrade;
 
 /**
@@ -41,17 +42,7 @@ public final class AtlasBuilder {
                 if (key == null) continue;
                 TradeSet set = sets.get(key).map(Holder::value).orElse(null);
                 if (set == null) continue;
-                List<TradeAtlas.Trade> trades = new ArrayList<>();
-                for (Holder<VillagerTrade> trade : set.trades()) {
-                    try {
-                        JsonElement encoded = VillagerTrade.CODEC.encodeStart(ops, trade.value())
-                                .getOrThrow();
-                        String id = trade.unwrapKey().map(k -> k.identifier().toString()).orElse("inline");
-                        trades.add(readTrade(id, encoded.getAsJsonObject()));
-                    } catch (Exception ignored) {
-                        // Bad third-party definitions must not break the atlas for other trades.
-                    }
-                }
+                List<TradeAtlas.Trade> trades = readTrades(set, ops);
                 String selection = set.amount().unwrapKey().map(k -> k.identifier().toString())
                         .orElse("Random selection");
                 levels.add(new TradeAtlas.Level(tier, trades, selection));
@@ -61,8 +52,53 @@ public final class AtlasBuilder {
             professions.add(new TradeAtlas.Profession(id.toString(), profession.name().getString(),
                     findWorkstation(profession), levels));
         }
+        // Wandering traders use three dedicated, non-level trade pools.
+        String[] traderPools = {"buying", "common", "uncommon"};
+        List<TradeAtlas.Level> traderLevels = new ArrayList<>();
+        for (int i = 0; i < traderPools.length; i++) {
+            var key = TradeSets.resourceKey("wandering_trader/" + traderPools[i]);
+            TradeSet set = sets.get(key).map(Holder::value).orElse(null);
+            if (set != null) {
+                traderLevels.add(new TradeAtlas.Level(i + 1, readTrades(set, ops),
+                        set.amount().unwrapKey().map(k -> k.identifier().toString()).orElse("Random selection")));
+            }
+        }
+        if (!traderLevels.isEmpty()) {
+            professions.add(new TradeAtlas.Profession("minecraft:wandering_trader",
+                    "Wandering Trader", "", traderLevels));
+        }
         professions.sort(Comparator.comparing(TradeAtlas.Profession::id));
         return new TradeAtlas(TradeAtlas.VERSION, "server", professions);
+    }
+
+    private static List<TradeAtlas.Trade> readTrades(TradeSet set, RegistryOps<JsonElement> ops) {
+        List<TradeAtlas.Trade> trades = new ArrayList<>();
+        for (Holder<VillagerTrade> trade : set.trades()) {
+            try {
+                JsonElement encoded = VillagerTrade.CODEC.encodeStart(ops, trade.value()).getOrThrow();
+                String id = trade.unwrapKey().map(k -> k.identifier().toString()).orElse("inline");
+                trades.add(readTrade(id, encoded.getAsJsonObject()));
+            } catch (RuntimeException ex) {
+                // A malformed custom trade should not blank the whole atlas.
+            }
+        }
+        return trades;
+    }
+
+    /** Only preview enchantments when the definition actually enchants the output. */
+    static boolean hasEnchantments(JsonElement element) {
+        if (element == null || element.isJsonNull()) return false;
+        if (element.isJsonArray()) {
+            for (var entry : element.getAsJsonArray()) if (hasEnchantments(entry)) return true;
+        } else if (element.isJsonObject()) {
+            JsonObject object = element.getAsJsonObject();
+            if (object.has("type") && object.get("type").isJsonPrimitive()
+                    && object.get("type").getAsString().contains("enchant")) return true;
+            if (object.has("minecraft:enchantments") || object.has("minecraft:stored_enchantments")
+                    || object.has("enchantments")) return true;
+            for (var entry : object.entrySet()) if (hasEnchantments(entry.getValue())) return true;
+        }
+        return false;
     }
 
     private static String findWorkstation(VillagerProfession profession) {
@@ -82,7 +118,9 @@ public final class AtlasBuilder {
         boolean conditional = obj.has("merchant_predicate");
         boolean modified = obj.has("given_item_modifier") || obj.has("double_trade_price_enchantments");
         return new TradeAtlas.Trade(id, ingredient(obj.get("wants")),
-                ingredient(obj.get("additional_wants")), ingredient(obj.get("gives")), conditional, modified);
+                ingredient(obj.get("additional_wants")), ingredient(obj.get("gives")), conditional, modified,
+                hasEnchantments(obj.get("given_item_modifier"))
+                        || hasEnchantments(obj.get("gives")));
     }
 
     static TradeAtlas.Ingredient ingredient(JsonElement el) {
